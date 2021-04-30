@@ -133,4 +133,84 @@ class XGBoostRegressionModelParitySpec extends FunSpec
 
     equalityTest(sparkDataset, mleapDataset)
   }
+
+  it("new test") {
+    import java.io.File
+
+    import ml.combust.bundle.BundleFile
+    import ml.combust.bundle.serializer.SerializationFormat
+    import ml.combust.mleap.runtime.MleapSupport._
+    import ml.combust.mleap.spark.SparkSupport._
+    import ml.dmlc.xgboost4j.scala.spark.XGBoostRegressor
+    import org.apache.spark.ml.Pipeline
+    import org.apache.spark.ml.bundle.SparkBundleContext
+    import org.apache.spark.ml.feature.{OneHotEncoderEstimator, StringIndexer, VectorAssembler}
+    import org.apache.spark.sql._
+    import resource._
+
+    import scala.util.Random
+
+    val spark = SparkSession.builder().
+      appName("bid_response_feedback").
+      config("spark.master", "local").
+      getOrCreate()
+    spark.sparkContext.setLogLevel("WARN")
+    import spark.implicits._
+
+    // dummy data
+    val N = 1000
+    val X = Seq.fill(N)((Random.nextDouble, Random.nextDouble, (Random.nextInt%100).toString, Random.nextDouble))
+    val data: DataFrame = X.toDF("num1", "num2", "cat", "y")
+    // create pipeline
+    val stringIndexer = new StringIndexer().setInputCol("cat").setOutputCol("indexed_cat").setHandleInvalid("keep")
+    val encoder = new OneHotEncoderEstimator().
+      setInputCols(Array("indexed_cat")).
+      setOutputCols(Array("encoded_cat")).
+      setDropLast(false)
+    val vectorAssembler = new VectorAssembler().setInputCols(Array("num1","num2", "encoded_cat")).setOutputCol("assembled_features")
+
+    val regressor = new XGBoostRegressor().
+      setFeaturesCol("assembled_features").
+      setLabelCol("y").
+      setMissing(0.0f).
+      setNumRound(300).
+      setEta(0.1).
+      setLambda(0.1).
+      setObjective("reg:linear")  // reg:linear
+    val stages = Array(stringIndexer, encoder, vectorAssembler, regressor)
+    val pipeline = new Pipeline().setStages(stages)
+
+    // train model
+    val model = pipeline.fit(data)
+    val sparkPred = model.transform(data)
+
+    // serialize model
+    val savePath = "/tmp/model1/" // "/tmp/model.zip"
+    new File(savePath).delete()
+    val sbc = SparkBundleContext().withDataset(sparkPred)
+    for(bf <- managed(BundleFile(s"file:$savePath"))) {  // s"jar:file:$savePath"
+      model.writeBundle.format(SerializationFormat.Json).save(bf)(sbc).get
+    }
+
+    /*sparkPred.select("num1", "num2", "cat", "prediction").
+      withColumnRenamed("prediction", "prediction_spark")
+      .show(20, false)*/
+
+    // deserialize model
+    val bundle = (for(bundleFile <- managed(BundleFile(s"file:$savePath"))) yield {  // s"jar:file:$savePath"
+      bundleFile.loadMleapBundle().get
+    }).opt.get
+    val mleapPipeline = bundle.root
+
+    // compare spark prediction with mleap prediction
+    // mleapPipeline.transform(SparkDataFrameOps(data.cache()).toSparkLeapFrame).get.toSpark.show(10)
+
+    mleapPipeline.sparkTransform(
+      sparkPred.select("num1", "num2", "cat", "prediction").
+        withColumnRenamed("prediction", "prediction_spark")
+    ).withColumnRenamed("prediction", "prediction_mleap").
+      select("prediction_spark", "prediction_mleap").show(20, false)
+
+    assert(true)
+  }
 }
