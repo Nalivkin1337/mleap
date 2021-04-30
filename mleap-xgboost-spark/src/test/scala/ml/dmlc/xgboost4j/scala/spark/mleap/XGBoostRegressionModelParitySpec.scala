@@ -176,7 +176,7 @@ class XGBoostRegressionModelParitySpec extends FunSpec
       setNumRound(300).
       setEta(0.1).
       setLambda(0.1).
-      setObjective("reg:linear")  // reg:linear
+      setObjective("reg:squarederror")  // reg:linear
     val stages = Array(stringIndexer, encoder, vectorAssembler, regressor)
     val pipeline = new Pipeline().setStages(stages)
 
