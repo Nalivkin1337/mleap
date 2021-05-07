@@ -16,7 +16,7 @@ object Dependencies {
   lazy val slf4jVersion = "1.7.25"
   lazy val awsSdkVersion = "1.11.349"
   val tensorflowVersion = "1.11.0"
-  val xgboostVersion = "0.81"
+  val xgboostVersion = "1.0.0"
   val hadoopVersion = "2.6.5" // matches spark version
 
   object Compile {
@@ -63,8 +63,8 @@ object Dependencies {
       "ch.qos.logback" % "logback-classic" % logbackVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % loggingVersion
     )
-    val xgboostDep = "ml.dmlc" % "xgboost4j" % xgboostVersion
-    val xgboostSparkDep = "ml.dmlc" % "xgboost4j-spark" % xgboostVersion
+    val xgboostDep = "ml.dmlc" %% "xgboost4j" % xgboostVersion
+    val xgboostSparkDep = "ml.dmlc" %% "xgboost4j-spark" % xgboostVersion
     val hadoop = "org.apache.hadoop" % "hadoop-client" % hadoopVersion
   }
 
