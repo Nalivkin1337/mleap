@@ -309,3 +309,20 @@ To run test (please ensure that you have no active VPN connections):
 ```
 sbt "mleap-xgboost-spark/test"
 ```
+
+## IDEA IDE
+
+Ensure that `File -> Project Structure -> Project SDK` configured with 1.8 JDK.
+
+
+## 
+
+You can meet xcrun error like:
+```
+xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
+java.util.NoSuchElementException: head of empty stream
+```
+
+On Mac it should be fixed by developer tools installation, you can trigger installer by:
+
+```xcode-select --install```
